@@ -1,0 +1,54 @@
+services:
+  notice_redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - my_network
+
+  notification_service:
+    image: notification_service
+    depends_on:
+      - rabbitmq
+      - celery_worker
+    networks:
+      - my_network
+      
+  celery_worker:
+    build:
+      context: .
+      dockerfile: src/celery_repo/Dockerfile_celery
+    container_name: celery_worker
+    depends_on:
+      - notice_redis
+    networks:
+      - my_network
+    
+  backend:
+    image: backend
+    ports:
+      - "8000:8000"
+    networks:
+      - my_network
+
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    networks:
+      - my_network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    
+networks:
+  my_network:
+    driver: bridge
+
+volumes:
+  rabbitmq-data:
